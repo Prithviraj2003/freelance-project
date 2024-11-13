@@ -237,6 +237,55 @@ export const updateQuiz = createAsyncThunk(
   }
 );
 
+export const overwriteQuizQuestions = createAsyncThunk(
+  'quiz/overwriteQuizQuestions',
+  async (
+    {
+      courseId,
+      quizId,
+      questions,
+    }: {
+      courseId: string;
+      quizId: string;
+      questions: {
+        questionType: 'SINGLE_CHOICE' | 'MULTIPLE_CHOICE' | 'TEXT';
+        content: string;
+        solution: Solution;
+      }[];
+    },
+    { rejectWithValue }
+  ) => {
+    try {
+      const token = sessionStorage.getItem('authToken');
+
+      const requestBody = {
+        questions: questions.map((question) => ({
+          questionType: question.questionType,
+          content: question.content,
+          solution: {
+            solution: question.solution.solution,
+            options: question.solution.options || [],
+          },
+        })),
+      };
+
+      const response = await axios.put(
+        `${mentorApiUrl}/quiz/overwrite-questions/${courseId}/${quizId}`,
+        requestBody,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      return response.data;
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data || 'Failed to overwrite quiz questions');
+    }
+  }
+);
+
 const initialState: QuizState = {
   loading: false,
   error: null,
@@ -337,6 +386,21 @@ const quizSlice = createSlice({
         state.questions = action.payload.questions || [];
       })
       .addCase(updateQuiz.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload as string;
+      })
+      .addCase(overwriteQuizQuestions.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(overwriteQuizQuestions.fulfilled, (state, action: PayloadAction<Quiz>) => {
+        state.loading = false;
+        state.quiz = state.quiz.map((quiz) =>
+          quiz._id === action.payload._id ? action.payload : quiz
+        );
+        state.questions = action.payload.questions || [];
+      })
+      .addCase(overwriteQuizQuestions.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload as string;
       });

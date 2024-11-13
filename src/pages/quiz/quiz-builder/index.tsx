@@ -4,10 +4,11 @@ import Button from '../../../components/atoms/button';
 import Input from '../../../components/molecule/input/Input';
 import Select from '../../../components/molecule/select/Select';
 import { IoMdAdd } from 'react-icons/io';
-import { useDispatch } from 'react-redux';
-import { createQuizWithQuestions } from '../../../redux/slices/quizSlice';
-import { AppDispatch } from '../../../redux/store';
+import { useDispatch, useSelector } from 'react-redux';
+import { createQuizWithQuestions, getQuizById, updateQuiz } from '../../../redux/slices/quizSlice';
+import { AppDispatch, RootState } from '../../../redux/store';
 import { FaArrowLeft } from 'react-icons/fa';
+import { useEffect } from 'react';
 
 interface QuizFormValues {
     quizName: string;
@@ -20,10 +21,16 @@ interface QuizFormValues {
     }[];
 }
 
-function QuizBuilder() {
+interface QuizBuilderProps {
+    isEditing?: boolean;
+    quizId?: string;
+}
+
+function QuizBuilder({ isEditing = false, quizId }: QuizBuilderProps) {
     const navigate = useNavigate();
     const dispatch = useDispatch<AppDispatch>();
     const { courseId } = useParams<{ courseId: string }>();
+    const { quiz, loading, error } = useSelector((state: RootState) => state.quiz);
 
     const methods = useForm<QuizFormValues>({
         defaultValues: {
@@ -45,11 +52,35 @@ function QuizBuilder() {
         },
     });
 
-    const { control, handleSubmit } = methods;
+    const { control, handleSubmit, reset } = methods;
     const { fields, append, remove } = useFieldArray({
         control,
         name: 'questions',
     });
+
+    useEffect(() => {
+        if (isEditing && quizId && courseId) {
+            dispatch(getQuizById({ courseId, quizId }));
+        }
+    }, [isEditing, quizId, courseId, dispatch]);
+
+    useEffect(() => {
+        if (isEditing && quiz.length > 0) {
+            const quizData = quiz[0];
+            const formattedQuizData = {
+                quizName: quizData.title,
+                quizDescription: quizData.description,
+                questions: quizData.questions.map((q) => ({
+                    questionType: q.questionType === 'SINGLE_CHOICE' ? 'single' :
+                        q.questionType === 'MULTIPLE_CHOICE' ? 'multiple' : 'text',
+                    question: q.content,
+                    options: q.solution.options ? q.solution.options.map(option => ({ option })) : [],
+                    correctAnswer: q.solution.solution,
+                })),
+            };
+            reset(formattedQuizData);
+        }
+    }, [isEditing, quiz, reset]);
 
     const onAddQuestion = () => {
         append({
@@ -93,10 +124,14 @@ function QuizBuilder() {
                 console.error("Course ID is undefined");
                 return;
             }
-            await dispatch(createQuizWithQuestions({ courseId, quizData: formattedQuizData })).unwrap();
+            if (isEditing && quizId) {
+                await dispatch(updateQuiz({ courseId, quizId, updatedData: formattedQuizData })).unwrap();
+            } else {
+                await dispatch(createQuizWithQuestions({ courseId, quizData: formattedQuizData })).unwrap();
+            }
             navigate(`/quiz-dashboard/${courseId}`);
         } catch (error) {
-            console.error("Error creating quiz:", error);
+            console.error("Error creating or updating quiz:", error);
         }
     };
 
@@ -110,7 +145,7 @@ function QuizBuilder() {
                     <span>Go Back</span>
                 </button>
                 <div className="flex justify-start items-center mb-8">
-                    <h1 className="text-[24px] font-semibold">Quiz Builder</h1>
+                    <h1 className="text-[24px] font-semibold">{isEditing ? 'Edit Quiz' : 'Quiz Builder'}</h1>
                 </div>
 
                 <div className="mb-8">
