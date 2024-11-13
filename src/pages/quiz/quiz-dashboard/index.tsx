@@ -81,6 +81,10 @@ const QuizList = ({ courseId }: QuizListProps) => {
         setQuizToEdit(null);
     };
 
+    const handleEditQuiz = (quizId: string) => {
+        navigate(`/quiz-builder/${courseId}?isEditing=true&quizId=${quizId}`);
+    };
+
     if (loading) {
         return (
             <div className="flex justify-center items-center h-[70vh]">
@@ -116,7 +120,7 @@ const QuizList = ({ courseId }: QuizListProps) => {
                                     <FiEdit2
                                         size={20}
                                         className="text-primary cursor-pointer"
-                                        onClick={() => showEditModal(q._id, q.title, q.description)}
+                                        onClick={() => handleEditQuiz(q._id)}
                                     />
                                     <FiTrash2
                                         size={20}

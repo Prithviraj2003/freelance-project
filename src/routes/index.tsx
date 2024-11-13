@@ -44,6 +44,7 @@ const Router: React.FC = () => {
                   <Route path="/quiz-builder/:courseId" element={<PrivateRoute><QuizBuilder /></PrivateRoute>} />
                   <Route path="/quiz-dashboard/:courseId" element={<PrivateRoute><QuizDashbaord courseId={''} /></PrivateRoute>} />
                   <Route path="/quiz/:courseId/:quizId" element={<PrivateRoute><Quiz /></PrivateRoute>} />
+                  <Route path="/quiz-builder/:courseId" element={<PrivateRoute><QuizBuilder isEditing={true} quizId={''} /></PrivateRoute>} />
                 </Routes>
               </>
             }
